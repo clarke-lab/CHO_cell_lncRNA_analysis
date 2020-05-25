@@ -1,0 +1,187 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+suppressMessages(library(refGenome))
+suppressMessages(library(GenomicRanges))
+suppressMessages(library(GenomicFeatures))
+```
+
+## transcripts from first feelnc
+```{r}
+candidate_lncrna_gtf="../lncrna_annotation/FEELnc/feelnc_codpot_out/candidate_lncRNA.gtf.lncRNA.gtf"
+feelnc_gtf <- rtracklayer::import(candidate_lncrna_gtf)
+# remove mtDNA transcripts
+feelnc_gtf<-feelnc_gtf[seqnames(feelnc_gtf) != 'MT']
+feelnc_lncrna_transcripts_without_mt<-unique(feelnc_gtf$transcript_id)
+write(paste(length(feelnc_lncrna_transcripts_without_mt), "identified_by_feelnc"),stdout())
+```
+## transcripts annotated by ensembl
+```{r}
+ensembl_lncrna_transcripts<-read.table("../reference_genome/ensembl_lncrna_transcript.txt", stringsAsFactors=F)$V1
+write(paste(length(ensembl_lncrna_transcripts), "annotated in Ensembl"),stdout())
+```
+## CPC analysis
+```{r}
+cpc_output<-"../lncrna_annotation/CPC2/CPC2.analysis.txt"
+cpc2 <- read.table(cpc_output,sep="\t")
+cpc2<-cpc2[cpc2$V8 == "noncoding",]
+cpc2_lncrna_transcripts<-as.character(cpc2$V1)
+write(paste(length(setdiff(feelnc_lncrna_transcripts,cpc2_lncrna_transcripts)), "filtered by cpc2"),stdout())
+```
+## CPAT analysis
+```{r}
+cpat_output<-"../lncrna_annotation/CPAT/CPAT.analysis.txt"
+cpat <- read.table(cpat_output)
+cpat<-cpat[cpat$coding_prob < 0.44,]
+cpat_lncrna_transcripts<-rownames(cpat)
+write(paste(length(setdiff(feelnc_lncrna_transcripts,cpat_lncrna_transcripts)), "filtered by cpat"),stdout())
+```
+## blast against swissprot
+```{r}
+swissprot_blast_output<-"../lncrna_annotation/SWISSPROT/blastp.outfmt6"
+blastp <- read.table(swissprot_blast_output,sep="\t")
+protein_hit<-data.frame("data"=as.character(blastp$V1))
+protein_hit<-substr(as.character(protein_hit$data),
+                    1,nchar(as.character(protein_hit$data))-3)
+blastp_hit <- (feelnc_lncrna_transcripts %in% protein_hit)
+write(paste(sum(blastp_hit), "filtered by SWISSPROT BLAST"),stdout())
+```
+## blast against MIRBASE
+```{r}
+mirbase_blast_output<-"../lncrna_annotation/MIRBASE/blastn.outfmt6"
+blastn_mir <- read.table(mirbase_blast_output,sep="\t")
+mirna_hit<-as.character(blastn_mir$V1)
+mirbase_hit <- (feelnc_lncrna_transcripts %in% mirna_hit)
+write(paste(sum(mirbase_hit), "filtered by miRBase BLAST"),stdout())
+```
+## PFAM search
+```{r}
+pfam_domain_hit_output<-"../lncrna_annotation/PFAM/pfam_domain_transcripts"
+pfam_domain_hit <-read.table(pfam_domain_hit_output)
+pfam_domain_hit<-as.character(pfam_domain_hit[,1])
+pfam_domain_hit <- (feelnc_lncrna_transcripts %in% pfam_domain_hit)
+write(paste(sum(pfam_domain_hit), "filtered by PFAM"),stdout())
+```
+## blast against RFAM
+```{r}
+rfam_blast_output="../lncrna_annotation/RFAM/blastn.outfmt6"
+blastn_rfam<-read.table(rfam_blast_output,sep="\t")
+ncrna_hit<-as.character(blastn_rfam$V1)
+rfam_hit <- (feelnc_lncrna_transcripts %in% ncrna_hit)
+write(paste(sum(rfam_hit), "filtered by RFAM"),stdout())
+```
+## TPM expression filter
+```{r}
+tpm_expression_matrix<-"../lncrna_annotation/TPM/transcript_tpm_all_samples.tsv"
+tpm_matrix<-read.table(tpm_expression_matrix, sep="\t", header=T, row.names=1)
+lncrna_tpm_matrix<-tpm_matrix[feelnc_lncrna_transcripts,]
+tpm_filter<-apply(lncrna_tpm_matrix,1,max) <= 1 # greater than TPM in 1 sample
+tpm_filtered<-rownames(lncrna_tpm_matrix[tpm_filter,])
+write(paste(length(tpm_filtered), "filtered by TPM"),stdout())
+```
+## Summary of first filtering stage
+```{r}
+firstpass_filtering_list<-"../lncrna_annotation/firstpass_filter/all_lncrna_transcripts.txt"
+write(paste(length(read.table(firstpass_filtering_list, header=F, stringsAsFactors=F)$V1),
+"putative lncRNAs remain after first filtering"),stdout())
+```
+
+## Assessing monoexonic transcripts
+```{r}
+mono_exonic_list<-"../lncrna_annotation/monoexonic_filter/monoexonic_transcripts.txt"
+write(paste(length(read.table(mono_exonic_list, header=F, stringsAsFactors=F)$V1),
+"monoexonic_from_first_filter"),stdout())
+```
+
+## novel monoexonic lncRNAs
+```{r}
+write(paste(
+  length(subset(length(read.table(mono_exonic_list, header=F, stringsAsFactors=F)$V1),
+  !grepl("ENSCGRT",
+  read.table(mono_exonic_list, header=F, stringsAsFactors=F)$V1))),
+"MSTRG monoexonic lncRNA transcripts identified"), stdout())
+```
+## putative lncRNAs with > 1 exon
+```{r}
+not_mono_exonic_list<-"../lncrna_annotation/monoexonic_filter/multiexonic_lncrnas.txt"
+write(paste(length(read.table(not_mono_exonic_list, header=F, stringsAsFactors=F)$V1),
+"more than 1 exon from_first_filter"), stdout())
+```
+
+## Monoexonic lncRNAs in RFAM
+```{r}
+rfam_mono<-"../lncrna_annotation/monoexonic_filter/rfam_monoexonic_lncrnas.txt"
+write(paste(length(read.table(rfam_mono, header=F, stringsAsFactors=F)$V1),
+"monoexonic in rfam"), stdout())
+```
+## mono exonic lncRNAs orthologous to an lncRNA in human
+```{r}
+human_mono<-"../lncrna_annotation/monoexonic_filter/human_monoexonic_lncrnas.txt"
+write(paste(length(read.table(human_mono, header=F, stringsAsFactors=F)$V1),
+"monoexonic with human ortholog"), stdout())
+```
+
+## mono exonic lncRNAs orthologous to an lncRNA in human
+```{r}
+mouse_mono<-"../lncrna_annotation/monoexonic_filter/mouse_monoexonic_lncrnas.txt"
+write(paste(length(read.table(mouse_mono, header=F, stringsAsFactors=F)$V1),
+"monoexonic with mouse ortholog"), stdout())
+```
+## monoexonic antisense
+```{r}
+feelnc_antisense_mono<-"../lncrna_annotation/monoexonic_filter/feelnc_antisense_overlap.txt"
+write(paste(length(read.table(feelnc_antisense_mono, header=F, stringsAsFactors=F)$V1),
+"feelnc classified monoexonic antisense"), stdout())
+```
+# final classification
+```{r}
+ens_all_lncrna_transcripts<-"../reference_genome/ensembl_lncrna_transcript.txt"
+write(paste(length(read.table(ens_all_lncrna_transcripts,header=F, stringsAsFactors=F)$V1),
+"ensembl_annotated_lncrnas"), stdout())
+
+mono_exonic_retained<-"../lncrna_annotation/monoexonic_filter/final_lncrna_list.txt"
+
+final_lncrna_list<-read.table(mono_exonic_retained, header=F, stringsAsFactors=F)$V1
+  ensembl_lncrnas<-read.table(ens_all_lncrna_transcripts,header=F, stringsAsFactors=F)$V1
+
+write(paste(
+  length(subset(final_lncrna_list,grepl("ENSCGRT",final_lncrna_list))),
+" ensembl annotated lncRNAs present"), stdout())
+
+#write.csv(setdiff(subset(final_lncrna_list,grepl("ENSCGRT",final_lncrna_list)),ensembl_lncrnas),file="other_ncrna_classified_as_lncrna.csv")
+write(paste(
+  length(
+    setdiff(subset(final_lncrna_list,grepl("ENSCGRT",final_lncrna_list)),ensembl_lncrnas)),
+" miscRNA/pseudogene ncRNA transcripts reclassified as lncRNAs"), stdout())
+write(paste(
+  length( subset(final_lncrna_list,!grepl("ENSCGRT",final_lncrna_list))),
+"novel lncRNA transcripts identified"), stdout())
+```
+## determine the total number lncRNAs identified that overlap
+```{r}
+#
+human_ortho_file="../lncrna_annotation/liftover/lncrna_cho_to_human.venn.txt"
+mouse_ortho_file="../lncrna_annotation/liftover/lncrna_cho_to_mouse.venn.txt"
+
+human_ortho_list<-read.table(human_ortho_file, header=F, stringsAsFactors=F)$V1
+mouse_ortho_list<-read.table(mouse_ortho_file, header=F, stringsAsFactors=F)$V1
+write(paste(sum(final_lncrna_list %in% human_ortho_list),
+"lncRNAs with human orthology identified"), stdout())
+write(paste(sum(final_lncrna_list %in% mouse_ortho_list),
+"lncRNAs with mouse orthology identified"), stdout())
+```
+#
+```{r}
+de_file<-"../differential_expression/results/Annotated_lncRNA_DESeq2_results.xlsx"
+de_results<-read.xlsx(de_file, sheetIndex = 1, header=T)
+write(paste(dim(de_results)[1], "Differrentially expressed lncRNAs"), stdout())
+write(paste(sum(de_results[,3] > 0), " lncrna upregulated @31C"), stdout())
+write(paste(sum(de_results[,3] < 0), " lncrna downregulated @31C"), stdout())
+write(paste(sum(!grepl("ENS",de_results[,1])), " DE lncRNAs not in ensembl"), stdout())
+write(paste(sum(!is.na(de_results[,5])), " DE lncRNAs have mouse ortholog"), stdout())
+write(paste(sum(!is.na(de_results[,7])), " DE lncRNAs have human ortholog"), stdout())
+write(paste(sum(!is.na(de_results[,14])), " DE lncRNAs have DE partner protein"), stdout())
+```
