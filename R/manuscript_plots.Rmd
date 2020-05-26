@@ -1,0 +1,276 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+suppressMessages(library(GenomicRanges))
+suppressMessages(library(ggpubr))
+suppressMessages(library(rtracklayer))
+suppressMessages(library(GenomicFeatures))
+suppressMessages(library(dplyr))
+suppressMessages(library(VennDiagram))
+library(RColorBrewer)
+```
+
+```{r}
+# make txdbs from gtf files
+all_lncrna<-makeTxDbFromGFF("../lncrna_annotation/lncrna.gtf")
+all_protein<-makeTxDbFromGFF("../transcriptome_assembly/stringtie.protein.coding.gtf")
+```
+
+```{r}
+#-----------------compare transcript length ------------------------------------
+
+#calculate lengths from txdb
+  lncrna_length <- transcriptLengths(all_lncrna)
+  protein_length <- transcriptLengths(all_protein)
+  lncrna_length$Class <- "lncRNA"
+  protein_length$Class <- "mRNA"
+  transcript_length_data <- rbind(protein_length,lncrna_length)
+  #save(transcript_length_data,file="manuscript_plotting/figure2/transcript_length.rData")
+
+  # plot transcript lengths
+  transcript_length_plot <- ggdensity(transcript_length_data,"tx_len","..density..",fill="Class",
+                                      alpha=0.8,xscale="log10",palette=c("#aca7ea","#f0e89b"))
+  transcript_length_plot <- transcript_length_plot + xlab("Transcript length (bp)") + ylab("Density")
+
+  transcript_length_plot <- transcript_length_plot + theme_bw() + theme(panel.grid.major =element_blank(),
+                                                                        panel.grid.minor = element_blank(),
+                                                                        strip.background = element_blank(),
+                                                                        strip.text = element_text(face="bold", size=7),
+                                                                        legend.position="none")
+  transcript_length_plot
+  # KS statistic
+  print(mean(transcript_length_data$tx_len[transcript_length_data$Class=="lncRNA"])/mean(transcript_length_data$tx_len[transcript_length_data$Class=="mRNA"]))
+  print(ks.test(protein_length$tx_len, lncrna_length$tx_len, alternative = "two.sided"))
+  
+  save(transcript_length_data,file="../plot_data/fig2a_transcript_length.rData")
+```
+
+
+
+```{r}
+#-----------------compare expression ------------------------------------
+# read the expression values
+tpm_matrix<-read.table("../lncrna_annotation/TPM/transcript_tpm_all_samples.tsv", sep="\t", header=T,stringsAsFactors = F, dec=".",row.names = 1)
+lncrna_transcripts<-transcripts(all_lncrna)
+protein_transcripts<-transcripts(all_protein)
+# filter TPM > 1 in one sample
+lncrna_tpm_matrix<-tpm_matrix[lncrna_transcripts$tx_name,]
+lncrna_tpm_filter<-apply(lncrna_tpm_matrix,1,max) > 1
+lncrna_tpm_matrix<-lncrna_tpm_matrix[lncrna_tpm_filter,]
+
+# filter TPM > 1 in one sample
+#tpm_matrix<-read.table("manuscript_plotting/figure2/TPM/transcript_tpm_all_samples1.tsv", sep="\t", header=T, row.names=1,stringsAsFactors=F)
+protein_tpm_matrix<-tpm_matrix[protein_transcripts$tx_name,]
+protein_tpm_filter<-apply(protein_tpm_matrix,1,max) > 1
+protein_tpm_matrix<-protein_tpm_matrix[protein_tpm_filter,]
+
+# calculate mean lncrna expression
+lncrna_tpm_mean<-data.frame(apply(lncrna_tpm_matrix,1,mean))
+lncrna_tpm_mean$Class="lncRNA"
+colnames(lncrna_tpm_mean)<-c("TPM", "Class")
+
+# calculate mean lncrna expression
+protein_tpm_mean<-data.frame(apply(protein_tpm_matrix,1,mean))
+protein_tpm_mean$Class="mRNA"
+colnames(protein_tpm_mean)<-c("TPM", "Class")
+
+tpm_data <- rbind(protein_tpm_mean,lncrna_tpm_mean)
+tpm_data$TPM <-log(tpm_data$TPM)+1
+
+
+# plot transcript expression
+transcript_expression_plot <- ggdensity(tpm_data,"TPM","..density..",fill="Class",alpha=0.8,palette=c("#aca7ea","#f0e89b"))
+transcript_expression_plot <- transcript_expression_plot + xlab("Transcript expression log2(TPM+1)") + ylab("Density")
+transcript_expression_plot <- transcript_expression_plot + theme_bw() + theme(panel.grid.major =element_blank(),
+                                                                                panel.grid.minor = element_blank(),
+                                                                                strip.background = element_blank(),
+                                                                                strip.text = element_text(face="bold", size=7),
+                                                                                legend.position="none")
+transcript_expression_plot
+
+print(mean(tpm_data$TPM[tpm_data$Class=="lncRNA"])/mean(tpm_data$TPM[tpm_data$Class=="mRNA"]))
+ks.test(tpm_data$TPM[tpm_data$Class=="lncRNA"],tpm_data$TPM[tpm_data$Class=="mRNA"], alternative = "two.sided")
+
+save(tpm_data,file="../plot_data/fig2b_transcript_expression.rData")
+
+```
+
+```{r}
+num_lncrna_genes <- length(genes(all_lncrna))
+num_protein_genes <- length(genes(all_protein))
+lncrna_exons <- exons(all_lncrna)
+protein_exons <- exons(all_protein)
+
+num_exons_lncRNA<- length(lncrna_exons)
+num_exons_protein <- length(protein_exons)
+print(num_exons_lncRNA/num_lncrna_genes)
+print(num_exons_protein/num_protein_genes)
+
+# group the exons by transcript
+lncrna.exons <- exonsBy(all_lncrna, by = "tx")
+protein.exons <- exonsBy(all_protein, by = "tx")
+# make a data frame with transcripts and exon count
+lncrna.exons.tx <- data.frame(tx = 1:length(lncrna.exons), exons = sapply(lncrna.exons, length))
+protein.exons.tx <- data.frame(tx = 1:length(protein.exons), exons = sapply(protein.exons, length))
+
+# plot
+lncrna.exons.tx[lncrna.exons.tx$exons > 20,2] <-21
+protein.exons.tx[protein.exons.tx$exons > 20,2] <-21
+
+exon_number_count_lncrna<-table( factor(lncrna.exons.tx$exons, levels = min(lncrna.exons.tx$exons):max(lncrna.exons.tx$exons)))
+exon_number_count_protein<-table( factor(protein.exons.tx$exons, levels = min(protein.exons.tx$exons):max(protein.exons.tx$exons)))
+
+per.cent.exons.lncrna<-data.frame(exon_num=as.character(1:21),percent=(exon_number_count_lncrna/dim(lncrna.exons.tx)[1])*100)
+per.cent.exons.protein<-data.frame(exon_num=as.character(1:21),percent=(exon_number_count_protein/dim(protein.exons.tx)[1])*100)
+per.cent.exons.lncrna$Class="lncRNA"
+per.cent.exons.protein$Class="mRNA"
+
+exon_count_data <- rbind(per.cent.exons.lncrna, per.cent.exons.protein)
+
+
+exon_count_plot<- ggplot(exon_count_data, aes(x = percent.Var1, y=percent.Freq, fill = Class)) + geom_bar(stat="identity", position="dodge", colour="black")
+exon_count_plot <- exon_count_plot + theme_bw() + scale_fill_manual(values=c("#aca7ea","#f0e89b"))
+exon_count_plot <- exon_count_plot + ylab("Percentage of transcripts") + xlab("Exon number")
+
+exon_count_plot <- exon_count_plot + theme_bw() + theme(panel.grid.major =element_blank(),
+                                                        panel.grid.minor = element_blank(),
+                                                        strip.background = element_blank(),
+                                                        strip.text = element_text(face="bold", size=7),
+                                                        legend.position="none")
+exon_count_plot
+save(exon_count_data,file="../plot_data/fig2d_exon_count.rData")
+```
+
+```{r}
+#read gc content data
+gc_data <- read.table("../plot_data/gc.content.txt", sep="\t", header=F)
+colnames(gc_data)<-c("gc", "Class")
+#
+
+gc_content_plot <- ggdensity(gc_data,"gc","..density..",fill="Class",
+                             alpha=0.8,palette=c("#9dc1c4","#687b7f"))
+gc_content_plot <- gc_content_plot + xlab("GC content (%)") + ylab("Density")
+
+gc_content_plot <- gc_content_plot + theme_bw() + theme(panel.grid.major =element_blank(),
+                            panel.grid.minor = element_blank(),
+                            strip.background = element_blank(),
+                            strip.text = element_text( size=7),
+                            legend.position="none")
+gc_content_plot
+
+print(ks.test(gc_data$gc[gc_data$Class=="lncRNA"],  gc_data$gc[gc_data$Class=="mRNA"],alternative = "two.sided"))
+
+save(gc_data,file="../plot_data/fig2c_gc_content.rData")
+```
+
+
+```{r}
+#-----------------compare number of isoforms/per gene ------------------------------------
+lncrna_transcripts<-transcriptsBy(all_lncrna)
+protein_transcripts<-transcriptsBy(all_protein)
+
+isoform_number_count_lncrna<-elementNROWS(lncrna_transcripts)
+isoform_number_count_protein<-elementNROWS(protein_transcripts)
+
+isoform_number_count_lncrna[isoform_number_count_lncrna > 11] <-12
+isoform_number_count_protein[isoform_number_count_protein > 11] <-12
+
+isoform_number_count_lncrna<-data.frame(table(factor(isoform_number_count_lncrna, levels = min(isoform_number_count_lncrna):max(isoform_number_count_lncrna))))
+isoform_number_count_protein<-data.frame(table(factor(isoform_number_count_protein, levels = min(isoform_number_count_protein):max(isoform_number_count_protein))))
+
+
+
+per.cent.isoforms.lncrna<-data.frame(isoform_num=c(1:12),percent=(isoform_number_count_lncrna$Freq/num_lncrna_genes)*100)
+per.cent.isoforms.protein<-data.frame(isoform_num=c(1:12),percent=(isoform_number_count_protein$Freq/num_protein_genes)*100)
+
+per.cent.isoforms.lncrna$Class="lncRNA"
+per.cent.isoforms.protein$Class="mRNA"
+
+
+  isoform_count_data <- rbind(per.cent.isoforms.lncrna,per.cent.isoforms.protein)
+
+
+isoform_count_plot <- ggplot(isoform_count_data, aes(x = isoform_num, y=percent, fill = Class)) + geom_bar(stat="identity", position="dodge", colour="black")
+isoform_count_plot <- isoform_count_plot + theme_bw() + scale_fill_manual(values=c("#aca7ea","#f0e89b"))
+isoform_count_plot <- isoform_count_plot + ylab("Percentage of transcripts") + xlab("Exon number")
+
+isoform_count_plot <- isoform_count_plot + theme_bw() + theme(panel.grid.major =element_blank(),
+                                                        panel.grid.minor = element_blank(),
+                                                        strip.background = element_blank(),
+                                                        strip.text = element_text(face="bold", size=7),
+                                                        legend.position="none")
+isoform_count_plot
+
+save(isoform_count_data,file="../plot_data/figure2e_isoform_count.rData")
+```
+
+```{r}
+classification_matrix <- read.table("../lncrna_annotation/classification/final_classification.txt",
+                                   sep=",", header=T)
+table(classification_matrix$summary_class)
+
+mono_exonic_retained<-"../lncrna_annotation/monoexonic_filter/final_lncrna_list.txt"
+
+final_lncrna_list<-read.table(mono_exonic_retained, header=F, stringsAsFactors=F)$V1
+
+length(final_lncrna_list) - sum(table(classification_matrix$summary_class))
+
+```
+
+```{r}
+rfam_blast_hits<-"../lncrna_annotation/RFAM/lncrna.blastn.outfmt6"
+mouse_synenty<-"../lncrna_annotation/liftover/lncrna_cho_to_mouse.venn.list"
+human_synenty<-"../lncrna_annotation/liftover/lncrna_cho_to_human.venn.list"
+
+rfam_hits<-read.table(rfam_blast_hits, header= F, stringsAsFactors=F)$V1
+mouse_hits<-read.table(mouse_synenty, header= F, stringsAsFactors=F)$V1
+human_hits<-read.table(human_synenty, header= F, stringsAsFactors=F)$V1
+
+myCol <- brewer.pal(3, "Pastel2")
+
+venn.diagram(
+  x = list( mouse_hits, rfam_hits, human_hits),
+  category.names = c("Mouse" , "RFAM" , "Human"),
+
+
+  # Output features
+          imagetype="png" ,
+          height = 880 ,
+          width = 880 ,
+          resolution = 300,
+          compression = "lzw",
+          force.unique=TRUE,
+
+          # Circles
+          lwd = 2,
+          lty = 'blank',
+          fill = myCol,
+
+          # Numbers
+          cex = .6,
+          fontface = "bold",
+          fontfamily = "sans",
+
+          # Set names
+          cat.cex = 0.6,
+          cat.fontface = "bold",
+          cat.default.pos = "outer",
+          cat.pos = c(-27, 27, 135),
+          cat.dist = c(0.055, 0.055, 0.085),
+          cat.fontfamily = "sans",
+          rotation = 0,
+
+          filename="../plot_data/fig2f_venn.tiff"
+
+)
+
+x = list(rfam_hits, mouse_hits, human_hits)
+```
+
+
+
