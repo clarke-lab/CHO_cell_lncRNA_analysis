@@ -1,4 +1,4 @@
-# CHO cell alternative splicing analysis
+# CHO lncRNA annotation and differential expression analysis
 
 ## Introduction
 ---
