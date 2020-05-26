@@ -215,7 +215,7 @@ Determine the lncRNAs that are differentially expressed between the temperature 
 ```bash
 mkdir differential_expression
 cat data/sample_info.txt | cut -f 2 | tail -n 8 | while read sample; do
-./scripts/htseq_count.sh -s $sample -m data/mapped -g transcriptome_assembly/stringtie_original.appended.fp.s.filtered.gtf -o differential_expression/counts&
+./scripts/htseq_count.sh -s $sample -m data/mapped -g transcriptome_assembly/stringtie.all.transcripts.gtf -o differential_expression/counts&
 done
 ```
 #### DESeq2 differential expression

@@ -1997,9 +1997,24 @@ alternative hypothesis: two-sided</code></pre>
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGVuZ3RoKGZpbmFsX2xuY3JuYV9saXN0KSAtIHN1bSh0YWJsZShjbGFzc2lmaWNhdGlvbl9tYXRyaXgkc3VtbWFyeV9jbGFzcykpXG5cbmBgYCJ9 -->
-<pre class="r"><code>length(final_lncrna_list) - sum(table(classification_matrix$summary_class))
-</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2xhc3NpZmljYXRpb25fbWF0cml4IDwtIHJlYWQudGFibGUoXCIuLi9sbmNybmFfYW5ub3RhdGlvbi9jbGFzc2lmaWNhdGlvbi9maW5hbF9jbGFzc2lmaWNhdGlvbi50eHRcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc2VwPVwiLFwiLCBoZWFkZXI9VClcbnRhYmxlKGNsYXNzaWZpY2F0aW9uX21hdHJpeCRzdW1tYXJ5X2NsYXNzKVxuYGBgIn0= -->
+<pre class="r"><code>classification_matrix &lt;- read.table(&quot;../lncrna_annotation/classification/final_classification.txt&quot;,
+                                   sep=&quot;,&quot;, header=T)
+table(classification_matrix$summary_class)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG4gICAgICAgICAgIGFudGlzZW5zZSAgICAgICAgICAgIGRpdmVyZ2VudCBkb3duc3RyZWFtIGFudGlzZW5zZSAgICAgZG93bnN0cmVhbSBzZW5zZSAgICAgICAgb3ZlcmxhcCBzZW5zZSBcbiAgICAgICAgICAgICAgICAxMDg5ICAgICAgICAgICAgICAgICAgMzM1ICAgICAgICAgICAgICAgICAgNTUzICAgICAgICAgICAgICAgICAgNTc2ICAgICAgICAgICAgICAgICAgMTE1IFxuICB1cHN0cmVhbSBhbnRpc2Vuc2UgICAgICAgdXBzdHJlYW0gc2Vuc2UgXG4gICAgICAgICAgICAgICAgIDc2MyAgICAgICAgICAgICAgICAgIDY1OSBcbiJ9 -->
+<pre><code>
+           antisense            divergent downstream antisense     downstream sense        overlap sense 
+                1089                  335                  553                  576                  115 
+  upstream antisense       upstream sense 
+                 763                  659 </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubW9ub19leG9uaWNfcmV0YWluZWQ8LVwiLi4vbG5jcm5hX2Fubm90YXRpb24vbW9ub2V4b25pY19maWx0ZXIvZmluYWxfbG5jcm5hX2xpc3QudHh0XCJcblxuZmluYWxfbG5jcm5hX2xpc3Q8LXJlYWQudGFibGUobW9ub19leG9uaWNfcmV0YWluZWQsIGhlYWRlcj1GLCBzdHJpbmdzQXNGYWN0b3JzPUYpJFYxXG5cbmxlbmd0aChmaW5hbF9sbmNybmFfbGlzdCkgLSBzdW0odGFibGUoY2xhc3NpZmljYXRpb25fbWF0cml4JHN1bW1hcnlfY2xhc3MpKVxuYGBgIn0= -->
+<pre class="r"><code>mono_exonic_retained&lt;-&quot;../lncrna_annotation/monoexonic_filter/final_lncrna_list.txt&quot;
+
+final_lncrna_list&lt;-read.table(mono_exonic_retained, header=F, stringsAsFactors=F)$V1
+
+length(final_lncrna_list) - sum(table(classification_matrix$summary_class))</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-output-begin eyJkYXRhIjoiWzFdIDIwOTdcbiJ9 -->
 <pre><code>[1] 2097</code></pre>
