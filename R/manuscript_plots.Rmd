@@ -11,6 +11,8 @@ suppressMessages(library(ggpubr))
 suppressMessages(library(rtracklayer))
 suppressMessages(library(GenomicFeatures))
 suppressMessages(library(dplyr))
+suppressMessages(library(VennDiagram))
+library(RColorBrewer)
 ```
 
 ```{r}
@@ -44,7 +46,11 @@ all_protein<-makeTxDbFromGFF("../transcriptome_assembly/stringtie.protein.coding
   # KS statistic
   print(mean(transcript_length_data$tx_len[transcript_length_data$Class=="lncRNA"])/mean(transcript_length_data$tx_len[transcript_length_data$Class=="mRNA"]))
   print(ks.test(protein_length$tx_len, lncrna_length$tx_len, alternative = "two.sided"))
+  
+  save(transcript_length_data,file="../plot_data/fig2a_transcript_length.rData")
 ```
+
+
 
 ```{r}
 #-----------------compare expression ------------------------------------
@@ -75,7 +81,7 @@ colnames(protein_tpm_mean)<-c("TPM", "Class")
 
 tpm_data <- rbind(protein_tpm_mean,lncrna_tpm_mean)
 tpm_data$TPM <-log(tpm_data$TPM)+1
-#save(tpm_data,file="manuscript_plotting/figure2/transcript_expression.rData")
+
 
 # plot transcript expression
 transcript_expression_plot <- ggdensity(tpm_data,"TPM","..density..",fill="Class",alpha=0.8,palette=c("#aca7ea","#f0e89b"))
@@ -89,6 +95,9 @@ transcript_expression_plot
 
 print(mean(tpm_data$TPM[tpm_data$Class=="lncRNA"])/mean(tpm_data$TPM[tpm_data$Class=="mRNA"]))
 ks.test(tpm_data$TPM[tpm_data$Class=="lncRNA"],tpm_data$TPM[tpm_data$Class=="mRNA"], alternative = "two.sided")
+
+save(tpm_data,file="../plot_data/fig2b_transcript_expression.rData")
+
 ```
 
 ```{r}
@@ -122,7 +131,7 @@ per.cent.exons.lncrna$Class="lncRNA"
 per.cent.exons.protein$Class="mRNA"
 
 exon_count_data <- rbind(per.cent.exons.lncrna, per.cent.exons.protein)
-#save(exon_count_data,file="manuscript_plotting/figure2/exon_count.rData")
+
 
 exon_count_plot<- ggplot(exon_count_data, aes(x = percent.Var1, y=percent.Freq, fill = Class)) + geom_bar(stat="identity", position="dodge", colour="black")
 exon_count_plot <- exon_count_plot + theme_bw() + scale_fill_manual(values=c("#aca7ea","#f0e89b"))
@@ -134,7 +143,31 @@ exon_count_plot <- exon_count_plot + theme_bw() + theme(panel.grid.major =elemen
                                                         strip.text = element_text(face="bold", size=7),
                                                         legend.position="none")
 exon_count_plot
+save(exon_count_data,file="../plot_data/fig2d_exon_count.rData")
 ```
+
+```{r}
+#read gc content data
+gc_data <- read.table("../plot_data/gc.content.txt", sep="\t", header=F)
+colnames(gc_data)<-c("gc", "Class")
+#
+
+gc_content_plot <- ggdensity(gc_data,"gc","..density..",fill="Class",
+                             alpha=0.8,palette=c("#9dc1c4","#687b7f"))
+gc_content_plot <- gc_content_plot + xlab("GC content (%)") + ylab("Density")
+
+gc_content_plot <- gc_content_plot + theme_bw() + theme(panel.grid.major =element_blank(),
+                            panel.grid.minor = element_blank(),
+                            strip.background = element_blank(),
+                            strip.text = element_text( size=7),
+                            legend.position="none")
+gc_content_plot
+
+print(ks.test(gc_data$gc[gc_data$Class=="lncRNA"],  gc_data$gc[gc_data$Class=="mRNA"],alternative = "two.sided"))
+
+save(gc_data,file="../plot_data/fig2c_gc_content.rData")
+```
+
 
 ```{r}
 #-----------------compare number of isoforms/per gene ------------------------------------
@@ -160,7 +193,7 @@ per.cent.isoforms.protein$Class="mRNA"
 
 
   isoform_count_data <- rbind(per.cent.isoforms.lncrna,per.cent.isoforms.protein)
-#save(isoform_count_data,file="manuscript_plotting/figure2/isoform_count.rData")
+
 
 isoform_count_plot <- ggplot(isoform_count_data, aes(x = isoform_num, y=percent, fill = Class)) + geom_bar(stat="identity", position="dodge", colour="black")
 isoform_count_plot <- isoform_count_plot + theme_bw() + scale_fill_manual(values=c("#aca7ea","#f0e89b"))
@@ -172,26 +205,72 @@ isoform_count_plot <- isoform_count_plot + theme_bw() + theme(panel.grid.major =
                                                         strip.text = element_text(face="bold", size=7),
                                                         legend.position="none")
 isoform_count_plot
+
+save(isoform_count_data,file="../plot_data/figure2e_isoform_count.rData")
 ```
 
 ```{r}
-#read gc content data
-gc_data <- read.table("../plot_data/gc.content.txt", sep="\t", header=F)
-colnames(gc_data)<-c("gc", "Class")
-#save(gc_data,file="manuscript_plotting/figure2/gc_content.rData")
+classification_matrix <- read.table("../lncrna_annotation/classification/final_classification.txt",
+                                   sep=",", header=T)
+table(classification_matrix$summary_class)
 
-gc_content_plot <- ggdensity(gc_data,"gc","..density..",fill="Class",
-                             alpha=0.8,palette=c("#9dc1c4","#687b7f"))
-gc_content_plot <- gc_content_plot + xlab("GC content (%)") + ylab("Density")
+mono_exonic_retained<-"../lncrna_annotation/monoexonic_filter/final_lncrna_list.txt"
 
-gc_content_plot <- gc_content_plot + theme_bw() + theme(panel.grid.major =element_blank(),
-                            panel.grid.minor = element_blank(),
-                            strip.background = element_blank(),
-                            strip.text = element_text( size=7),
-                            legend.position="none")
-gc_content_plot
+final_lncrna_list<-read.table(mono_exonic_retained, header=F, stringsAsFactors=F)$V1
 
-print(ks.test(gc_data$gc[gc_data$Class=="lncRNA"],  gc_data$gc[gc_data$Class=="mRNA"],alternative = "two.sided"))
+length(final_lncrna_list) - sum(table(classification_matrix$summary_class))
 
 ```
+
+```{r}
+rfam_blast_hits<-"../lncrna_annotation/RFAM/lncrna.blastn.outfmt6"
+mouse_synenty<-"../lncrna_annotation/liftover/lncrna_cho_to_mouse.venn.list"
+human_synenty<-"../lncrna_annotation/liftover/lncrna_cho_to_human.venn.list"
+
+rfam_hits<-read.table(rfam_blast_hits, header= F, stringsAsFactors=F)$V1
+mouse_hits<-read.table(mouse_synenty, header= F, stringsAsFactors=F)$V1
+human_hits<-read.table(human_synenty, header= F, stringsAsFactors=F)$V1
+
+myCol <- brewer.pal(3, "Pastel2")
+
+venn.diagram(
+  x = list( mouse_hits, rfam_hits, human_hits),
+  category.names = c("Mouse" , "RFAM" , "Human"),
+
+
+  # Output features
+          imagetype="png" ,
+          height = 880 ,
+          width = 880 ,
+          resolution = 300,
+          compression = "lzw",
+          force.unique=TRUE,
+
+          # Circles
+          lwd = 2,
+          lty = 'blank',
+          fill = myCol,
+
+          # Numbers
+          cex = .6,
+          fontface = "bold",
+          fontfamily = "sans",
+
+          # Set names
+          cat.cex = 0.6,
+          cat.fontface = "bold",
+          cat.default.pos = "outer",
+          cat.pos = c(-27, 27, 135),
+          cat.dist = c(0.055, 0.055, 0.085),
+          cat.fontfamily = "sans",
+          rotation = 0,
+
+          filename="../plot_data/fig2f_venn.tiff"
+
+)
+
+x = list(rfam_hits, mouse_hits, human_hits)
+```
+
+
 

@@ -5,7 +5,7 @@
 This respository enables the reproduction of the analysis described in:
 
 Motheramgari *et al.* **Expanding the Chinese hamster ovary cell long non-coding RNA transcriptome using RNASeq**
-*bioRxiv 2019* [https://doi.org/10.1101/863175](https://doi.org/10.1101/863175)
+*bioRxiv 2019* [https://doi.org/10.1101/863241](https://doi.org/10.1101/863241)
 
 ### Data availability:
 [NIBI Sequence Read Archive](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA593052/)  
@@ -19,13 +19,25 @@ All the programmes must be added to the PATH to run the workflow
   - [STAR-2.7.2d](https://github.com/alexdobin/STAR)
   - [stringtie 2.0.3](http://ccb.jhu.edu/software/stringtie/index.shtml)
   - [samtools 1.6](http://www.htslib.org)
+  - [bedtools 2.25.0](https://bedtools.readthedocs.io/en/latest/)
+  - [cpat 1.2.4](http://rna-cpat.sourceforge.net/)
+  - [cpc2 0.1](http://cpc2.cbi.pku.edu.cn)
+  - [FEELNc 0.01](https://github.com/tderrien/FEELnc)
+  - [transdecoder 5.5.0](https://github.com/TransDecoder/TransDecoder/wiki)
+  - [hmmer 3.2.1](http://hmmer.org/)
+  - [blast 2.2.31](https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download)
+  - [gmap 2015-09-29](http://research-pub.gene.com/gmap/)
+  - [Kent Utils liftOver](https://github.com/ENCODE-DCC/kentUtils)
+  - [HTSeq 0.9.1](http://htseq.readthedocs.io/en/master/count.html)
 
 - R 3.5.2
     - [dpylr 0.8.4](https://dplyr.tidyverse.org)
-    - [DESeq2 1.22.0](https://bioconductor.org/packages/release/bioc/html/DESeq2.html)
+    - [DESeq2 1.22.2](https://bioconductor.org/packages/release/bioc/html/DESeq2.html)
     - [xlxs 0.6.2](https://cran.r-project.org/web/packages/xlsx/index.html)
-    - [stringr 1.4.0](https://stringr.tidyverse.org)
     - [biomaRt 2.38.0](https://bioconductor.org/packages/release/bioc/html/biomaRt.html)
+    - [GenomicRanges 1.34.0](https://bioconductor.org/packages/release/bioc/html/GenomicRanges.html)
+    - [GenomicFeatures 1.34.8](https://bioconductor.org/packages/release/bioc/html/GenomicFeatures.html)
+    - [refGenome 1.7.3.1](https://cran.r-project.org/src/contrib/Archive/refGenome/)
 
 ## RNASeq data preprocesssing
 ---
@@ -99,6 +111,8 @@ done
 ```
 
 ### merge individual stringtie assemblies and compare to ENSEMBL annotation
+In this code the stringtie is separated into transcripts originating from annotated protein coding genes and
+non-coding RNAs
 ```bash
 ./scripts/stringtie_merge.sh -t transcriptome_assembly -g reference_genome/ensembl_chok1_genome.gtf -r reference_genome
 ```
@@ -109,15 +123,15 @@ Make a directory to hold each of the different analyses
 mkdir lncrna_annotation
 ```
 ### Calculate the expression values for each transcript
+The TPM expression value is calculated for each transcript assembled by StringTie
 ```bash
 cat data/sample_info.txt | cut -f 2 | tail -n 8 | while read sample; do
   ./scripts/calc_tpm.sh -p 32 -s $sample -g transcriptome_assembly/stringtie.all.transcripts.gtf -o lncrna_annotation/TPM -b data/mapped
-done
-```
-```bash
+
 # list samples
 awk 'NR>1 {print $2}' data/sample_info.txt > lncrna_annotation/TPM/sample_list.txt
 ./scripts/tpm_matrix.sh -s lncrna_annotation/TPM/sample_list.txt -o lncrna_annotation/TPM/
+done
 ```
 
 ### FEELNc analysis
@@ -132,23 +146,28 @@ The stringtie transcriptome assembly is used to predict lncRNAs using FEELNc
 ./scripts/run_transdecoder.sh -g lncrna_annotation/FEELnc/feelnc_codpot_out/candidate_lncRNA.gtf.lncRNA.gtf -f reference_genome/ensembl_chok1_genome.fa -o lncrna_annotation/TRANSDECODER
 ```
 #### CPAT coding prediction for FEELNc candidate lncRNAs
+Determine protein coding potential using CPAT
 ```bash
 ./scripts/run_cpat.sh -f lncrna_annotation/TRANSDECODER/candidate_lncrna_cdna.fa -o lncrna_annotation/CPAT
 ```
 #### CPC2 coding prediction for FEELnc candidate lncRNAs
+Determine protein coding potential using CPC2
 ```bash
   ./scripts/run_cpc2.sh -f lncrna_annotation/TRANSDECODER/candidate_lncrna_cdna.fa -o lncrna_annotation/CPC2
 ```
 #### Assess FEELnc candiate lncRNAs for the presence of protein domains
+Search for known PFAM domains
 ```bash
 ./scripts/run_hmmscan.sh -t 32 -e 1e-5 -p lncrna_annotation/TRANSDECODER/longest_orfs.pep -o lncrna_annotation/PFAM
 ```
-#### Assess FEELnc candiate lncRNAs for the presence of proteins, miRNAs, and other non-coding RNAs (e.g. snoRNAs) using BLAST
+#### BLAST FEELnc candiate lncRNAs
+Search SWISSPROT,RFAM & MIRBASE
 ```bash
 ./scripts/run_blast.sh  -t 32 -e 1e-5 -s lncrna_annotation/SWISSPROT -p lncrna_annotation/TRANSDECODER/longest_orfs.pep -m lncrna_annotation/MIRBASE -r lncrna_annotation/RFAM -n lncrna_annotation/TRANSDECODER/candidate_lncrna_cdna.fa
 ```
 
-### intersect the results
+### First stage of filtering
+Remove candidates from FEELNc that don't meet criteria
 ```bash
 /usr/bin/Rscript R/filter_lncrna.R \
   "lncrna_annotation/FEELnc/feelnc_codpot_out/candidate_lncRNA.gtf.lncRNA.gtf" \
@@ -165,8 +184,7 @@ The stringtie transcriptome assembly is used to predict lncRNAs using FEELNc
 ```
 
 ### Second stage of filtering
-Here we filter monoexonic annotations. First we determine the lncRNAs that pass the first stage of filtering and their
-orthology with human and mouse lncRNAs
+Here we further filter potential lncRNAs by removing monoexonic transcripts
 #### determine synteny with human and mouse gencode lncRNAs
 ```bash
 ./scripts/orthology_analysis.sh -s lncrna_annotation/firstpass_filter/lncRNA.fasta -o lncrna_annotation
@@ -174,7 +192,7 @@ orthology with human and mouse lncRNAs
 ## Filter monoexonic lncRNAs
 
 #### keep only monoexonic lncRNAs that are:
-#### 1) antisense to a protein coding gene 2) are orthologous with human or mouse 3) annotated as lncRNA in ensembl
+1) antisense to a protein coding gene 2) are orthologous with human or mouse 3) annotated as lncRNA in ensembl
 ```bash
 ./scripts/filter_monoexonic_lncrnas.sh \
 -o lncrna_annotation \
@@ -183,7 +201,8 @@ orthology with human and mouse lncRNAs
 -k reference_genome/ensembl_lncrna_transcript.txt \
 -a transcriptome_assembly/non_protein_coding_stringtie.gtf
 ```
-#
+### Classify lncRNA types
+
 ```bash
 /usr/bin/Rscript R/Rscript R/simplify_class.R \
   "lncrna_annotation/classification/second_classification.txt" \
@@ -191,6 +210,7 @@ orthology with human and mouse lncRNAs
 ```
 
 ## Differential expression analysis
+Determine the lncRNAs that are differentially expressed between the temperature shift and non-temperature shift conditions
 #### Gene level counting
 ```bash
 mkdir differential_expression
@@ -198,7 +218,7 @@ cat data/sample_info.txt | cut -f 2 | tail -n 8 | while read sample; do
 ./scripts/htseq_count.sh -s $sample -m data/mapped -g transcriptome_assembly/stringtie_original.appended.fp.s.filtered.gtf -o differential_expression/counts&
 done
 ```
-
+#### DESeq2 differential expression
 ```bash
 mkdir differential_expression/results
 Rscript R/run_deseq.R "differential_expression/counts" "differential_expression/results"
