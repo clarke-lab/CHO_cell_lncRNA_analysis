@@ -46,21 +46,21 @@ This is a simple way to dowload from ENA, for higher speed download use the Aspe
 Total data download size: **~95G**
 ```bash
 mkdir -p data/ena
-wget -q "ftp://ftp.sra.ebi.ac.uk/ena/vol1/fastq/SRR105/057/SRR10572657/*" -P data/ena || { handle ; error ; }
+wget -q "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR105/057/SRR10572657/*" -P data/ena || { handle ; error ; }
 
-wget -q "ftp://ftp.sra.ebi.ac.uk/ena/vol1/fastq/SRR105/058/SRR10572658/*" -P data/ena || { handle ; error ; }
+wget -q "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR105/058/SRR10572658/*" -P data/ena || { handle ; error ; }
 
-wget -q "ftp://ftp.sra.ebi.ac.uk/ena/vol1/fastq/SRR105/059/SRR10572659/*" -P data/ena || { handle ; error ; }
+wget -q "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR105/059/SRR10572659/*" -P data/ena || { handle ; error ; }
 
-wget -q "ftp://ftp.sra.ebi.ac.uk/ena/vol1/fastq/SRR105/060/SRR10572660/*" -P data/ena || { handle ; error ; }
+wget -q "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR105/060/SRR10572660/*" -P data/ena || { handle ; error ; }
 
-wget -q "ftp://ftp.sra.ebi.ac.uk/ena/vol1/fastq/SRR105/061/SRR10572661/*" -P data/ena || { handle ; error ; }
+wget -q "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR105/061/SRR10572661/*" -P data/ena || { handle ; error ; }
 
-wget -q "ftp://ftp.sra.ebi.ac.uk/ena/vol1/fastq/SRR105/062/SRR10572662/*" -P data/ena || { handle ; error ; }
+wget -q "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR105/062/SRR10572662/*" -P data/ena || { handle ; error ; }
 
-wget -q "ftp://ftp.sra.ebi.ac.uk/ena/vol1/fastq/SRR105/063/SRR10572663/*" -P data/ena || { handle ; error ; }
+wget -q "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR105/063/SRR10572663/*" -P data/ena || { handle ; error ; }
 
-wget -q "ftp://ftp.sra.ebi.ac.uk/ena/vol1/fastq/SRR105/064/SRR10572664/*" -P data/ena || { handle ; error ; }
+wget -q "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR105/064/SRR10572664/*" -P data/ena || { handle ; error ; }
 ```
 ### trim adapter sequences
 Adapter trimming for the Illumina TruSeq adapters
