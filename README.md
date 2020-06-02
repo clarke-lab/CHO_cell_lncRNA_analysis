@@ -22,7 +22,7 @@ All the programmes must be added to the PATH to run the workflow
   - [bedtools 2.25.0](https://bedtools.readthedocs.io/en/latest/)
   - [cpat 1.2.4](http://rna-cpat.sourceforge.net/)
   - [cpc2 0.1](http://cpc2.cbi.pku.edu.cn)
-  - [FEELNc 0.01](https://github.com/tderrien/FEELnc)
+  - [FEELNc 0.1.1](https://github.com/tderrien/FEELnc)
   - [transdecoder 5.5.0](https://github.com/TransDecoder/TransDecoder/wiki)
   - [hmmer 3.2.1](http://hmmer.org/)
   - [blast 2.2.31](https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download)
