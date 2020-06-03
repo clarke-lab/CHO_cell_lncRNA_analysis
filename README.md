@@ -110,7 +110,7 @@ cat data/sample_info.txt | cut -f 2 | tail -n 8 | while read sample; do
 done
 ```
 
-### merge individual stringtie assemblies and compare to ENSEMBL annotation
+### Merge individual stringtie assemblies and compare to ENSEMBL annotation
 In this code the stringtie is separated into transcripts originating from annotated protein coding genes and
 non-coding RNAs
 ```bash
@@ -127,8 +127,12 @@ The TPM expression value is calculated for each transcript assembled by StringTi
 ```bash
 cat data/sample_info.txt | cut -f 2 | tail -n 8 | while read sample; do
   ./scripts/calc_tpm.sh -p 32 -s $sample -g transcriptome_assembly/stringtie.all.transcripts.gtf -o lncrna_annotation/TPM -b data/mapped
-
-# list samples
+  done
+  ```
+  
+### List samples
+```bash
+cat data/sample_info.txt | cut -f 2 | tail -n 8 | while read sample; do
 awk 'NR>1 {print $2}' data/sample_info.txt > lncrna_annotation/TPM/sample_list.txt
 ./scripts/tpm_matrix.sh -s lncrna_annotation/TPM/sample_list.txt -o lncrna_annotation/TPM/
 done
