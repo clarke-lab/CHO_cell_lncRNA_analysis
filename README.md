@@ -8,7 +8,7 @@ Motheramgari *et al.* **Expanding the Chinese hamster ovary cell long non-coding
 *Biotechnology and Bioengineering 2020* [https://doi.org/10.1002/bit.27467](https://doi.org/10.1002/bit.27467)
 
 ### Data availability:
-[NIBI Sequence Read Archive](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA593052/)  
+[NCBI Sequence Read Archive](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA593052/)  
 [European Nucleotide Archive](https://www.ebi.ac.uk/ena/browser/view/PRJNA593052)
 
 ### Dependancies
