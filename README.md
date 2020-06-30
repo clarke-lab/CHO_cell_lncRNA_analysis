@@ -5,7 +5,7 @@
 This respository enables the reproduction of the analysis described in:
 
 Motheramgari *et al.* **Expanding the Chinese hamster ovary cell long non-coding RNA transcriptome using RNASeq**
-*bioRxiv 2019* [https://doi.org/10.1101/863241](https://doi.org/10.1101/863241)
+*Biotechnology and Bioengineering 2020* [https://doi.org/10.1002/bit.27467](https://doi.org/10.1002/bit.27467)
 
 ### Data availability:
 [NIBI Sequence Read Archive](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA593052/)  
