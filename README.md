@@ -134,7 +134,7 @@ cat data/sample_info.txt | cut -f 2 | tail -n 8 | while read sample; do
 ```bash
 cat data/sample_info.txt | cut -f 2 | tail -n 8 | while read sample; do
 awk 'NR>1 {print $2}' data/sample_info.txt > lncrna_annotation/TPM/sample_list.txt
-./scripts/tpm_matrix.sh -s lncrna_annotation/TPM/sample_list.txt -o lncrna_annotation/TPM/
+./scripts/tpm_matrix.sh -s lncrna_annotation/TPM/sample_list.txt -o lncrna_annotation/TPM
 done
 ```
 
