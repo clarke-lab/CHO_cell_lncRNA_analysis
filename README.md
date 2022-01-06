@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/225317432.svg)](https://zenodo.org/badge/latestdoi/225317432)
+
 # CHO lncRNA annotation and differential expression analysis
 
 ## Introduction
